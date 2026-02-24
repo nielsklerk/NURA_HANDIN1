@@ -42,14 +42,11 @@ def construct_vandermonde_matrix(x: np.ndarray) -> np.ndarray:
     -------
     V : np.ndarray, Vandermonde matrix.
     """
-    for j in range(A.shape[1]):
-        for i in range(1, j + 1):
-            A[i, j] -= np.sum([A[i, k] * A[k, j] for k in range(i)])
-        for i in range(j + 1, A.shape[0]):
-            A[i, j] -= np.sum([A[i, k] * A[k, j] for k in range(j)])
-            A[i, j] /= A[j, j]
-    return A
-
+    n = len(x)
+    V = np.ones((n, n), dtype=np.float64)
+    for j in range(1, n):
+        V[:, j] = x**j
+    return V
 
 def LU_decomposition(A: np.ndarray) -> np.ndarray:
     """
@@ -68,8 +65,12 @@ def LU_decomposition(A: np.ndarray) -> np.ndarray:
     A : np.ndarray
         Decomposed array.
     """
-    # TODO:
-    # write your LU decomposition
+    for j in range(A.shape[1]):
+        for i in range(0, j + 1):
+            A[i, j] -= np.sum([A[i, k] * A[k, j] for k in range(i)])
+        for i in range(j + 1, A.shape[0]):
+            A[i, j] -= np.sum([A[i, k] * A[k, j] for k in range(j)])
+            A[i, j] /= A[j, j]
     return A
 
 
@@ -90,9 +91,9 @@ def forward_substitution_unit_lower(LU: np.ndarray, b: np.ndarray) -> np.ndarray
     y : np.ndarray
         Solution vector.
     """
-    # TODO:
-    # write your forward substitution for unit lower triangular matrix
-    return np.zeros_like(b)
+    for i in range(1, len(b)):
+        b[i] -= np.sum([LU[i, j]*b[j] for j in range(i)])
+    return b
 
 
 def backward_substitution_upper(LU: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -112,9 +113,12 @@ def backward_substitution_upper(LU: np.ndarray, y: np.ndarray) -> np.ndarray:
     c : np.ndarray
         Solution vector.
     """
-    # TODO:
-    # write your backward substitution for upper triangular matrix
-    return np.zeros_like(y)
+    N = len(y)
+    y[-1] /= LU[-1, -1]
+    for i in range(1, N):
+        y[-1 - i] -= np.sum([LU[-1 - i, j] * y[j] for j in range(N - i, N)])
+        y[-1 - i] /= LU[-1 - i, -1 - i]
+    return y
 
 
 def vandermonde_solve_coefficients(x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -133,9 +137,11 @@ def vandermonde_solve_coefficients(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     c : np.ndarray
         Polynomial coefficients.
     """
-    # TODO:
-    # solve V*c = y using your LU decomposition and forward/backward substitution
-    return np.zeros_like(x)  # Replace with your solution
+    vandermonde_matrix = construct_vandermonde_matrix(x)
+    LU = LU_decomposition(vandermonde_matrix)
+    y = forward_substitution_unit_lower(LU, y)
+    y = backward_substitution_upper(LU, y)
+    return y
 
 
 def evaluate_polynomial(c: np.ndarray, x_eval: np.ndarray) -> np.ndarray:
