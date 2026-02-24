@@ -42,11 +42,13 @@ def construct_vandermonde_matrix(x: np.ndarray) -> np.ndarray:
     -------
     V : np.ndarray, Vandermonde matrix.
     """
-    # TODO:
-    # Replace with actual Vandermonde!
-    return np.zeros(
-        (len(x), len(x)), dtype=np.float64
-    )
+    for j in range(A.shape[1]):
+        for i in range(1, j + 1):
+            A[i, j] -= np.sum([A[i, k] * A[k, j] for k in range(i)])
+        for i in range(j + 1, A.shape[0]):
+            A[i, j] -= np.sum([A[i, k] * A[k, j] for k in range(j)])
+            A[i, j] /= A[j, j]
+    return A
 
 
 def LU_decomposition(A: np.ndarray) -> np.ndarray:
