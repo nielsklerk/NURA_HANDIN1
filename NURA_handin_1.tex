@@ -1,0 +1,117 @@
+\documentclass{article}
+
+\usepackage[a4paper]{geometry}
+\usepackage[english]{babel}
+\usepackage{parskip}
+
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  showstringspaces=false,
+  tabsize=2
+}
+\lstset{style=mystyle}
+
+\newcommand{\CodeDir}{Code}
+\newcommand{\PlotDir}{Plots}
+
+\title{NURa Hand-in 1}
+\author{<Name> (<Student number>)}
+\date{<Date>}
+
+\begin{document}
+\maketitle
+
+\textit{Write a short description of your solution in each section. Explain your choices. Draw the conclusions from your results.}
+
+\textit{You can refer to selected lines of code where you think it is necessary. However, you must provide the full code below each question/task.}
+
+
+\textit{Don't forget to describe your figures and mention what conclusions you draw from them!}
+
+\section{Poisson Distribution}
+
+% Add the full code below.
+The full code used for this question:
+\lstinputlisting[language=Python]{\CodeDir/Poisson_code.txt}
+
+% Show your results.
+The results of $P_\lambda(k)$ for selected values of $k$ and $\lambda$ are shown in Table~\ref{tab:poisson}.
+
+\begin{table}[H]
+\centering
+\caption{Poisson probability distribution for selected $k$ and $\lambda$.}
+\label{tab:poisson}
+\begin{tabular}{|c|c|c|}
+\hline
+$\lambda$ & $k$ & $P_\lambda(k)$ \\ 
+\hline
+\input{Poisson_output.txt}
+\end{tabular}
+\end{table}
+
+\section{Vandermonde Matrix and Interpolation}
+
+\subsection{(2a) LU decomposition}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.80\textwidth]{\PlotDir/vandermonde_sol_2a.pdf}
+  \caption{Polynomial fit evaluated using LU decomposition. Top: data points and interpolated curve. Bottom: absolute error at the data points on a log scale.}
+  \label{fig:vandermonde_2a}
+\end{figure}
+
+\subsection{(2b) Neville's algorithm}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.80\textwidth]{\PlotDir/vandermonde_sol_2b.pdf}
+  \caption{Interpolation using Neville's algorithm. Top: data points and interpolated curve. Bottom: absolute error at the data points on a log scale.}
+  \label{fig:vandermonde_2b}
+\end{figure}
+
+\subsection{(2c) Improving the LU decomposition}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.80\textwidth]{\PlotDir/vandermonde_sol_2c.pdf}
+  \caption{LU-based solution with iterative refinement (showing iterations 0, 1 and 10). Top: interpolated curves. Bottom: absolute error at the data points on a log scale.}
+  \label{fig:vandermonde_2c}
+\end{figure}
+
+\subsection{(2d) Timing}
+
+Timing results (average per run):
+\begin{itemize}
+  \input{Execution_times.txt}
+\end{itemize}
+
+\subsection{Code for Question 2}
+The following code was used for parts (2a)--(2d):
+\lstinputlisting[language=Python]{\CodeDir/Vandermonde_all_code.txt}
+
+\subsection{Conclusions}
+\textit{Write a short summary here: which method is most accurate, where errors increase, and how iterations affect accuracy.}
+
+\end{document}
+
