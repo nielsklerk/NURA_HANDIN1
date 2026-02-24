@@ -15,7 +15,7 @@ def Poisson(k: np.int32, lmbda: np.float32) -> np.float32:
     # By taking the log of the factorial we prevent an overflow error for larger values of k
     P = np.exp(k * np.log(lmbda) - lmbda - (np.sum([np.log(x) for x in range(2, k + 1)]))) 
 
-    return 0.0
+    return P
 
 
 def main() -> None:
