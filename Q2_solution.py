@@ -73,7 +73,6 @@ def LU_decomposition(A: np.ndarray) -> np.ndarray:
             A[i, j] /= A[j, j]
     return A
 
-
 def forward_substitution_unit_lower(LU: np.ndarray, b: np.ndarray) -> np.ndarray:
     """
     Solve L*y = b using forward substitution,
@@ -114,10 +113,10 @@ def backward_substitution_upper(LU: np.ndarray, y: np.ndarray) -> np.ndarray:
         Solution vector.
     """
     N = len(y)
-    y[-1] /= LU[-1, -1]
+    y[-1] /= LU[-1, -1] + 1e2
     for i in range(1, N):
         y[-1 - i] -= np.sum([LU[-1 - i, j] * y[j] for j in range(N - i, N)])
-        y[-1 - i] /= LU[-1 - i, -1 - i]
+        y[-1 - i] /= LU[-1 - i, -1 - i] + 1e2
     return y
 
 
@@ -139,9 +138,9 @@ def vandermonde_solve_coefficients(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """
     vandermonde_matrix = construct_vandermonde_matrix(x)
     LU = LU_decomposition(vandermonde_matrix)
-    y = forward_substitution_unit_lower(LU, y)
-    y = backward_substitution_upper(LU, y)
-    return y
+    b = forward_substitution_unit_lower(LU, y)
+    c = backward_substitution_upper(LU, b)
+    return c
 
 
 def evaluate_polynomial(c: np.ndarray, x_eval: np.ndarray) -> np.ndarray:
@@ -160,9 +159,10 @@ def evaluate_polynomial(c: np.ndarray, x_eval: np.ndarray) -> np.ndarray:
     y_eval : np.ndarray
         Polynomial values.
     """
-    # TODO:
-    # evaluate the polynomial at x_eval using the coefficients c from vandermonde_solve_coefficients
-    return np.zeros_like(x_eval)  # Replace with your results
+    total = np.zeros_like(x_eval)
+    for j, c_value in enumerate(c):
+        total += c_value * x_eval **j
+    return total  # Replace with your results
 
 
 def neville(x_data: np.ndarray, y_data: np.ndarray, x_interp: float) -> float:
@@ -179,9 +179,12 @@ def neville(x_data: np.ndarray, y_data: np.ndarray, x_interp: float) -> float:
     ------------
     float: The interpolated y value at x_interp.
     """
-    # TODO:
-    # write your Neville's algorithm
-    return 0
+    M = len(x_data)
+    new_values = y_data.copy()
+    for k in range(M - 1):
+        for i in range(M - k - 1):
+            new_values[i] = ((x_data[i+1 + k] - x_interp) * new_values[i] + (x_interp - x_data[i]) * new_values[i + 1])/(x_data[i+1 + k] - x_data[i])
+    return new_values[0]
 
 
 # you can merge the function below with LU_decomposition to make it more efficient
@@ -429,7 +432,7 @@ def main():
     with open("Coefficients_output.txt", "w", encoding="utf-8") as f:
         for i, coef in enumerate(formatted_c):
             f.write(f"c$_{i+1}$ = {coef}, ")
-
+    x_data, y_data = load_data()
     plot_part_b(x_data, y_data)
 
     coeffs_history = run_LU_iterations(
