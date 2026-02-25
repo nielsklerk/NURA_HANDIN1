@@ -237,13 +237,13 @@ def run_LU_iterations(
     b = forward_substitution_unit_lower(LU, y[index_array])
     c = backward_substitution_upper(LU, b)
     delta_y = vandermonde_matrix @ c - y
-    solutions = [c]
+    solutions = [c.copy()]
     for _ in range(iterations):
         delta_b = forward_substitution_unit_lower(LU, delta_y[index_array])
         delta_c = backward_substitution_upper(LU, delta_b)
         c -= delta_c
         delta_y = vandermonde_matrix @ c - y
-        solutions.append(c)
+        solutions.append(c.copy())
     with open(coeffs_output_path, "w", encoding="utf-8") as f:
         for solution in solutions:
             for i, coef in enumerate(solution):
@@ -457,7 +457,7 @@ def main():
         f.write(f"\\item Execution time for part (a): {t_a:.5f} seconds\n")
         f.write(f"\\item Execution time for part (b): {t_b:.5f} seconds\n")
         f.write(f"\\item Execution time for part (c): {t_c:.5f} seconds\n")
-
+    x_data, y_data = load_data()
     c_a = vandermonde_solve_coefficients(x_data, y_data)
     plot_part_a(x_data, y_data, c_a)
 
@@ -465,6 +465,7 @@ def main():
     with open("Coefficients_output.txt", "w", encoding="utf-8") as f:
         for i, coef in enumerate(formatted_c):
             f.write(f"c$_{i+1}$ = {coef}, ")
+    x_data, y_data = load_data()
     plot_part_b(x_data, y_data)
 
     coeffs_history = run_LU_iterations(
@@ -473,6 +474,7 @@ def main():
         iterations=11,
         coeffs_output_path="Coefficients_per_iteration.txt",
     )
+    x_data, y_data = load_data()
     plot_part_c(x_data, y_data, coeffs_history, iterations_num=[0, 1, 10])
 
 
