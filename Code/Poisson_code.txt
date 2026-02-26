@@ -9,11 +9,8 @@ def Poisson(k: np.int32, lmbda: np.float32) -> np.float32:
     Returns:
         np.float32: The probability of observing k occurrences given the mean lmbda.
     """
-    # The probability is calculated by splitting up the formula of the probability using P = exp(ln(P)).
-    # Using logarithm rules we can split up the factors. 
-    # The factorial becomes the sum of the log (running from 2 up until k as log(1) = 0)
-    # By taking the log of the factorial we prevent an overflow error for larger values of k
-    return np.exp(k * np.log(lmbda) - lmbda - (np.sum([np.log(x) for x in range(2, k + 1)]))) 
+    # Calculate probabilty by splitting up the formula of the probability using P = exp(ln(P)).
+    return np.exp(k * np.log(lmbda) - lmbda - np.sum([np.log(x) for x in range(2, k + 1)])) 
 
 
 def main() -> None:
