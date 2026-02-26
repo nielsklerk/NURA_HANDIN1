@@ -42,11 +42,10 @@ def construct_vandermonde_matrix(x: np.ndarray) -> np.ndarray:
     -------
     V : np.ndarray, Vandermonde matrix.
     """
-    n = len(x)
-    V = np.ones((n, n), dtype=np.float64)
-    for j in range(1, n):
-        V[:, j] = x**j
-    return V
+    # Create an exponent array with 2 axes
+    j = np.arange(len(x))[None, :]
+
+    return x[:, None] ** j
 
 def LU_decomposition(A: np.ndarray) -> np.ndarray:
     """
@@ -65,31 +64,63 @@ def LU_decomposition(A: np.ndarray) -> np.ndarray:
     A : np.ndarray
         Decomposed array.
     """
-    def swap_rows(M: np.ndarray, i, j):
-        temp = M[i].copy()
-        M[i] = M[j].copy()
-        M[j] = temp
-        return M
+
+    def swap_rows(A: np.ndarray, i: int, j: int) -> np.ndarray:
+        """
+        Swaps two rows of an array
+
+        Parameters
+        ----------
+        M: np.ndarray
+            Matrix of which rows need to be swapped
+        i: int
+            Row index 1
+        j: int
+            Row index 2   
+
+        Returns
+        -------
+        A : np.ndarray
+            Matrix with rows i and j swapped
+
+        """
+        temp = A[i].copy()
+        A[i] = A[j].copy()
+        A[j] = temp
+
+        return A
+
+    # Find the largest value in each row and calculate their inverse
+    biggest_in_row = np.max(np.abs(A), axis=1)
+    if 0 in biggest_in_row:
+        raise ValueError('This matrix is singular')
+    inverse = 1/biggest_in_row
 
     A = A.copy()
     N = A.shape[0]
     index_array = np.arange(N)
+
+    # Loop over k
     for k in range(N):
         pivot = 0
         i_max = None
+
+        # Loop over the rows to find the pivot
         for i in range(k, N):
-            if np.abs(A[i, k]) > pivot:
-                pivot = np.abs(A[i, k])
+            if np.abs(A[i, k] * inverse[i]) > np.abs(pivot * inverse[k]):
+                pivot = A[i, k].copy()
                 i_max = i
-        if pivot == 0:
-            raise ValueError('This matrix is singular')
+
+        # Swap rows if the pivot is not yet in row k
         if i_max != k:
             A = swap_rows(A, i_max, k)
             index_array = swap_rows(index_array, i_max, k)
-        for i in range(k+1, N):
-            A[i, k] /= A[k, k]
-            for j in range(k+1, N):
-                A[i, j] -= A[i, k]*A[k, j]
+            inverse = swap_rows(inverse, i_max, k)
+
+        # Divide by the pivot and subtract to find the components of the LU matrix
+        A[k+1:N, k] /= pivot
+        A[k+1:N, k+1:] -= A[k+1:N, k:k+1] * A[k:k+1, k+1:]
+
     return A, index_array
 
 def forward_substitution_unit_lower(LU: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -109,8 +140,11 @@ def forward_substitution_unit_lower(LU: np.ndarray, b: np.ndarray) -> np.ndarray
     y : np.ndarray
         Solution vector.
     """
+
+    # Loop over the elements of b to perform the forward substitution
     for i in range(1, len(b)):
-        b[i] -= np.sum([LU[i, j]*b[j] for j in range(i)])
+        b[i] -= LU[i, :i] @ b[:i]
+
     return b
 
 
@@ -132,10 +166,13 @@ def backward_substitution_upper(LU: np.ndarray, y: np.ndarray) -> np.ndarray:
         Solution vector.
     """
     N = len(y)
-    y[-1] /= LU[-1, -1] + 1e2
-    for i in range(1, N):
-        y[-1 - i] -= np.sum([LU[-1 - i, j] * y[j] for j in range(N - i, N)])
+
+    # Loop backwards over the elements of y to perform the forward substitution
+    for i in range(N):
+        if i != 0:
+            y[-1 - i] -= LU[-1 - i, N-i:] @ y[N-i:]
         y[-1 - i] /= LU[-1 - i, -1 - i]
+
     return y
 
 
@@ -158,8 +195,8 @@ def vandermonde_solve_coefficients(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     vandermonde_matrix = construct_vandermonde_matrix(x)
     LU, index_array = LU_decomposition(vandermonde_matrix)
     b = forward_substitution_unit_lower(LU, y[index_array])
-    c = backward_substitution_upper(LU, b)
-    return c
+
+    return backward_substitution_upper(LU, b)
 
 
 def evaluate_polynomial(c: np.ndarray, x_eval: np.ndarray) -> np.ndarray:
@@ -178,10 +215,13 @@ def evaluate_polynomial(c: np.ndarray, x_eval: np.ndarray) -> np.ndarray:
     y_eval : np.ndarray
         Polynomial values.
     """
-    total = np.zeros_like(x_eval)
-    for j, c_value in enumerate(c):
-        total += c_value * x_eval **j
-    return total  # Replace with your results
+    # Create an exponent array with 2 axes
+    j = np.arange(len(c))[None, :]
+
+    # Turning the x^j part of the sum into a matrix M such that y = M @ c
+    matrix = x_eval[:, None] ** j
+
+    return matrix @ c
 
 
 def neville(x_data: np.ndarray, y_data: np.ndarray, x_interp: float) -> float:
@@ -200,9 +240,11 @@ def neville(x_data: np.ndarray, y_data: np.ndarray, x_interp: float) -> float:
     """
     M = len(x_data)
     new_values = y_data.copy()
+
+    # Loop over the number of iterations to be performed
     for k in range(M - 1):
-        for i in range(M - k - 1):
-            new_values[i] = ((x_data[i+1 + k] - x_interp) * new_values[i] + (x_interp - x_data[i]) * new_values[i + 1])/(x_data[i+1 + k] - x_data[i])
+        new_values[:M-k-1] = ((x_data[1 + k:M] - x_interp) * new_values[:M-k-1] + (x_interp - x_data[:M-k-1]) * new_values[1:M-k])/(x_data[1 + k:M] - x_data[:M-k-1])
+    
     return new_values[0]
 
 
@@ -234,22 +276,35 @@ def run_LU_iterations(
     """
     vandermonde_matrix = construct_vandermonde_matrix(x)
     LU, index_array = LU_decomposition(vandermonde_matrix)
-    b = forward_substitution_unit_lower(LU, y[index_array])
-    c = backward_substitution_upper(LU, b)
-    delta_y = vandermonde_matrix @ c - y
-    solutions = [c.copy()]
-    for _ in range(iterations):
+    delta_y = y.copy()
+    coeffs_history = np.zeros(iterations, dtype=np.ndarray)
+    
+    # Looping over iterations
+    for i in range(iterations):
         delta_b = forward_substitution_unit_lower(LU, delta_y[index_array])
-        delta_c = backward_substitution_upper(LU, delta_b)
-        c -= delta_c
+        delta_b = backward_substitution_upper(LU, delta_b)
+
+        # For the first iteration store the base estimate for c
+        if i == 0:
+            c = delta_b.copy()
+
+        # For the other iterations improve the estimate of c using delta_b
+        else:
+            c -= delta_b
+        
         delta_y = vandermonde_matrix @ c - y
-        solutions.append(c.copy())
+
+        # Storing the new coefficients
+        coeffs_history[i] = c.copy()
+    
+    # Writing the coefficients of each iteration to .t
     with open(coeffs_output_path, "w", encoding="utf-8") as f:
-        for solution in solutions:
-            for i, coef in enumerate(solution):
+        for coeffs in coeffs_history:
+            for i, coef in enumerate(coeffs):
                 f.write(f"c$_{i+1}$ = {coef}, ")
-            f.write(f"\n")
-    return solutions
+            f.write("\n")
+        
+    return coeffs_history
 
 
 def plot_part_a(
@@ -457,7 +512,6 @@ def main():
         f.write(f"\\item Execution time for part (a): {t_a:.5f} seconds\n")
         f.write(f"\\item Execution time for part (b): {t_b:.5f} seconds\n")
         f.write(f"\\item Execution time for part (c): {t_c:.5f} seconds\n")
-    x_data, y_data = load_data()
     c_a = vandermonde_solve_coefficients(x_data, y_data)
     plot_part_a(x_data, y_data, c_a)
 
@@ -465,7 +519,6 @@ def main():
     with open("Coefficients_output.txt", "w", encoding="utf-8") as f:
         for i, coef in enumerate(formatted_c):
             f.write(f"c$_{i+1}$ = {coef}, ")
-    x_data, y_data = load_data()
     plot_part_b(x_data, y_data)
 
     coeffs_history = run_LU_iterations(
@@ -474,7 +527,6 @@ def main():
         iterations=11,
         coeffs_output_path="Coefficients_per_iteration.txt",
     )
-    x_data, y_data = load_data()
     plot_part_c(x_data, y_data, coeffs_history, iterations_num=[0, 1, 10])
 
 
