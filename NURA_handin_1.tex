@@ -40,19 +40,22 @@
 
 \title{NURa Hand-in 1}
 \author{Niels de Klerk (s3640477)}
-\date{\today}
+\date{March 1, 2026}
 
 \begin{document}
 \maketitle
-
-\textit{Write a short description of your solution in each section. Explain your choices. Draw the conclusions from your results.}
-
-\textit{You can refer to selected lines of code where you think it is necessary. However, you must provide the full code below each question/task.}
-
-
-\textit{Don't forget to describe your figures and mention what conclusions you draw from them!}
-
 \section{Poisson Distribution}
+The Poisson distribution describes the probability distribution for a randomly distributed integers. This is the probability that can be calculated with 
+\begin{equation}
+    P_k(\lambda) = \frac{\lambda^ke^{-\lambda}}{k!}
+\end{equation}
+Calculating the values numerically for different combinations of $k$ and $\lambda$ can result in overflow and underflow errors. The factorial part of the equation can cause an overflow error for large values of $k$. The reverse is true for the exponential. This part underflows for large values of $\lambda$. This problem can be mitigated by taking the exponential and the logarithm of the equation. This is mathematically equivalent to the original equation. However, we can use logarithm rules to split up the factors of the equation to increase the numerical stability. 
+
+\begin{equation}
+    P_k(\lambda) = \frac{\lambda^ke^{-\lambda}}{k!} = \exp\left(\ln\left(\frac{\lambda^ke^{-\lambda}}{k!}\right)\right) = \exp\left(k\ln(\lambda) - \lambda - \sum^k_{i=2}\ln(i)\right)
+\end{equation}
+
+Due to the logarithm, both the large and small factors get converted to more manageable values, thereby reducing the errors. Furthermore, the factorial, that is, the product of integers, becomes a sum over the natural log of integers. So the sum can start at $i=2$ as $\ln(1)=0$, slightly reducing the number of calculations. 
 
 % Add the full code below.
 The full code used for this question:
@@ -74,8 +77,48 @@ $\lambda$ & $k$ & $P_\lambda(k)$ \\
 \end{table}
 
 \section{Vandermonde Matrix and Interpolation}
+The elements of the Vandermonde matrix are defined as
 
-\subsection{(2a) LU decomposition}
+\begin{equation}
+    V_{ij} = x_i^j,
+\end{equation}
+where $i$ is the row index and $j$ the column index. This matrix can be used to find the Lagrange polynomial, the unique polynomial through a set of $N$ points $(x_i, y_i)$. By solving the equation 
+
+\begin{equation}
+    V\textbf{c}=\textbf{y},
+\end{equation}
+where $V$ is the Vandermonde matrix which uses the points $x_i$, $\textbf{c}$ the coefficient vector, and $\textbf{y}$ the vector with elements $y_i$. This coefficient vector  $\textbf{c}$ can be used to find the unique polynomial using
+
+\begin{equation}
+    y = \sum_{j=0}^Nc_jx^j.
+\end{equation}
+
+\subsection{(2a) LU decomposition}\label{subsec: 2a}
+To solve for $\textbf{c}$ in the equation $V\textbf{c}=\textbf{y}$, LU decomposition can be used. The LU matrix consists of 2 matrices, a lower and an upper triangle matrix. The diagonal elements of the lower triangle are set to $1$. So the elements of both matrices can be stored in a single matrix. To find the LU matrix, we will use an improved Crout's algorithm. The algorithm starts by finding the largest absolute value in each row (line 94). If one of these values is $0$, this means that the matrix is singular, so an error is raised (line 96). Then the inverses of these larges values are calculated to be used later (line 97). Following this, a loop is started over $k$ (line 104). First, loop over the rows to find the pivot and the index of the pivot (lines 109-112). Secondly, if the pivot is not yet on the diagonal, the rows are swapped to place it there (lines 115-116). The same row swap is applied to the index array and the array of inverses (lines 117-118). Finally, the elements below the pivot element in column k are divided by the pivot (line 121), and for each element to the right and below the pivot, the product of the element in the same row below the pivot and the element in the same column above the pivot is subtracted (line 122). The LU matrix and index array are returned to be used to solve for $\textbf{c}$ (line 124).  
+
+Now that the matrix $V$ is decomposed into the LU matrix, $\textbf{c}$ can be found by first performing a forward substitution followed by a backward substitution. Defining $\textbf{b}=U\textbf{c}$, where $U$ is the upper triangle matrix of the LU matrix with elements $\beta_{ij}$, solving for $\textbf{b}$ in the equation $L\textbf{b}=\textbf{c}$, where $L$ is the lower triangle matrix of the LU matrix with elements $\alpha_{ij}$. The elements of $\textbf{b}$ can be found using forwards substitution: 
+\begin{equation}
+    b_0=\frac{y_0}{\alpha_{00}},
+\end{equation}
+and
+\begin{equation}
+    b_i=\frac{1}{\alpha_{ii}}\left[y_i-\sum_{j=0}^{i-1}\alpha_{ij}b_j\right].
+\end{equation}
+These equations can be simplified as $\alpha_{ii}=1$. This results in
+\begin{equation}\label{eq:forward}
+    b_i=y_i-\sum_{j=0}^{i-1}\alpha_{ij}b_j.
+\end{equation}
+In the implementation of Crout's algorithm, rows of the matrix were swapped. The same swaps have to be applied to the elements of $\textbf{y}$ before using its values in \autoref{eq:forward}. The elements $b_i$ are solved in the order $i=0, 1, ..., N-2, N-1$. To save memory, the values of $\textbf{b}$ are stored in the array of $\textbf{y}$ with its rows swapped. Now that the elements of $\textbf{b}$ are known, the elements of $\textbf{c}$ can be calculated from the equation $U\textbf{c}=\textbf{b}$ by using backward substitution.
+\begin{equation}
+    c_{N-1}=\frac{b_{N-1}}{\beta_{(N-1)(N-1)}},
+\end{equation}
+and
+\begin{equation}
+    c_i=\frac{1}{\beta_{ii}}\left[b_i-\sum_{j=i+1}^{N-1}\beta_{ij}c_j\right].
+\end{equation}
+The elements $c_i$ are solved in the order $i=N-1, N-2, ..., 1, 0$. 
+Similarly to the forward substitution, the elements of $\textbf{c}$ are stored in $\textbf{b}$ (so $\textbf{y}$ with its rows swapped) to save memory. The results of the fit are shown in \autoref{fig:vandermonde_2a}.
+
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.80\textwidth]{\PlotDir/vandermonde_sol_2a.pdf}
@@ -83,7 +126,18 @@ $\lambda$ & $k$ & $P_\lambda(k)$ \\
   \label{fig:vandermonde_2a}
 \end{figure}
 
-\subsection{(2b) Neville's algorithm}
+\autoref{fig:vandermonde_2a} shows that the absolute error starts at $10^{-16}$ and increases for larger values of $x$. This can be explained by the fact that the polynomial is calculated using $y = \sum_{j=0}^Nc_jx^j$. For larger x values, taking the power results in really large values, which increase the inaccuracies. 
+
+\subsection{(2b) Neville's algorithm}\label{subsec: 2b}
+After applying LU decomposition, we will use Neville's algorithm to interpolate between the points $(x_i, y_i)$. By applying this algorithm to all points, we retrieve the Lagrange polynomial. 
+
+The algorithm starts with the original y-values (line 242). It iteratively improves the estimates by using the previous estimates and the x-values. 
+
+\begin{equation}
+    P_{i, k+1} = \frac{(x_{i+k} - x) P_{i, k} + (x-x_i)P_{i+1, k}}{x_{i+k}-x_{i}},
+\end{equation}
+where $k$ is the iteration where the values $P$ with $k=0$ are the original values.Each iteration is stored in the same array to save memory (line 246). The expression is vectorized to speed up the code. Lastly, the first element in the array is returned as the best estimated (line 248). The interpolated values are shown in \autoref{fig:vandermonde_2b}.
+
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.80\textwidth]{\PlotDir/vandermonde_sol_2b.pdf}
@@ -91,27 +145,40 @@ $\lambda$ & $k$ & $P_\lambda(k)$ \\
   \label{fig:vandermonde_2b}
 \end{figure}
 
-\subsection{(2c) Improving the LU decomposition}
+The errors shown in \autoref{fig:vandermonde_2b} are much lower than the errors shown in \autoref{fig:vandermonde_2a}. The errors using Neville's algorithm stay lower as they use values that are already approximately correct and therefore reduce the error, whereas using the LU decomposition uses large powers and large values. 
+
+\subsection{(2c) Improving the LU decomposition}\label{subsec: 2c}
+The Lagrange polynomial derived using the LU decomposition could be enhanced by iteratively improving the estimation of $\textbf{c}$. Assuming that an imperfect solution is found $\textbf{c'} = \textbf{c} + \delta\textbf{c}$, and filling this solution in $V\textbf{c'} =\textbf{y}$ results in 
+\begin{equation}
+    V(\textbf{c} + \delta\textbf{c}) =\textbf{y} + V\delta\textbf{c} = \textbf{y} + \delta\textbf{y}
+\end{equation}
+Solving for $\delta\textbf{y}$ in the equation $V\delta\textbf{c} =V\textbf{c'} - \textbf{y}$ can be used to improve the estimate for $\textbf{c}$ by $\textbf{c''} = \textbf{c'} - \delta\textbf{c}$. This process is efficient because the LU decomposition is computed once, and each iteration then uses only forward and backward substitution to calculate the new estimation of $\textbf{c}$. Several iterations are shown in \autoref{fig:vandermonde_2c}.
+
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.80\textwidth]{\PlotDir/vandermonde_sol_2c.pdf}
-  \caption{LU-based solution with iterative refinement (showing iterations 0, 1 and 10). Top: interpolated curves. Bottom: absolute error at the data points on a log scale.}
+  \caption{LU-based solution with iterative refinement (showing iterations 0, 1, and 10). Top: interpolated curves. Bottom: absolute error at the data points on a log scale.}
   \label{fig:vandermonde_2c}
 \end{figure}
 
+The errors in \autoref{fig:vandermonde_2c} do not improve for more iterations. The error at the zeroth iteration is even lower than that at the first and tenth iterations. This is because the implementation of this LU decomposition is already at the lowest error. So, more iterations do not improve the error. 
+
 \subsection{(2d) Timing}
+
+To test the speed of the code used in \autoref{subsec: 2a}, \autoref{subsec: 2b}, and \autoref{subsec: 2c}, the code is run 10 times, and the average is used to evaluate the speed. The results are shown in the table below.
 
 Timing results (average per run):
 \begin{itemize}
   \input{Execution_times.txt}
 \end{itemize}
 
+The LU decomposition (part a) is significantly faster than Neville's algorithm (part b). This is because the LU decomposition computes the coefficients of the Lagrange polynomial once and then uses them to interpolate between the data points. In contrast, Neville's algorithm has to do one loop for each data point for every x-coordinate used int he interpolation. This results in many calculations for each point, whereas the LU decomposition is a single decomposition that applies to all points. Part c naturally takes longer than part a as part a is a subset of the code ran for part c. However, part c is still much faster than Neville's algorithm for the same reason that part a is faster than Neville's algorithm. 
+
 \subsection{Code for Question 2}
 The following code was used for parts (2a)--(2d):
 \lstinputlisting[language=Python]{\CodeDir/Vandermonde_all_code.txt}
 
 \subsection{Conclusions}
-\textit{Write a short summary here: which method is most accurate, where errors increase, and how iterations affect accuracy.}
-
+Three algorithms were applied to find the Lagrange polynomial through a set of data points: LU decomposition, Neville's algorithm, and an iterative version of the LU decomposition. In this implementation, Neville's algorithm returned the best result. Its errors are low for all data points. In contrast, the LU decomposition and the iterative version of the LU decomposition have low errors for smaller values of x, but the errors rapidly increase for larger x-values. The iterative version of the LU decomposition does not return a better result for a larger number of iterations, signaling that the original implementation was already approximately at the lowest error. 
 \end{document}
 
