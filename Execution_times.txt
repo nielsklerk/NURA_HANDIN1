@@ -1,3 +1,3 @@
-\item Execution time for part (a): 0.00150 seconds
-\item Execution time for part (b): 0.35450 seconds
-\item Execution time for part (c): 0.00713 seconds
+\item Execution time for part (a): 0.00140 seconds
+\item Execution time for part (b): 0.32115 seconds
+\item Execution time for part (c): 0.00635 seconds
